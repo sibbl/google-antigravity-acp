@@ -1,0 +1,38 @@
+{
+  "name": "google-antigravity-acp",
+  "version": "1.0.0",
+  "description": "Agent Client Protocol (ACP) server for Google Antigravity, compatible with acpx and other ACP clients",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "google-antigravity-acp": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "acp",
+    "agent-client-protocol",
+    "antigravity",
+    "google",
+    "gemini",
+    "coding-agent",
+    "acpx",
+    "openclaw"
+  ],
+  "author": "Antigravity ACP Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^1.4.0",
+    "commander": "^13.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7"
+  }
+}
