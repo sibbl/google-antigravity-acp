@@ -14,6 +14,17 @@
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sibbl/google-antigravity-acp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sibbl/google-antigravity-acp/issues"
+  },
+  "homepage": "https://github.com/sibbl/google-antigravity-acp#readme",
   "keywords": [
     "acp",
     "agent-client-protocol",
