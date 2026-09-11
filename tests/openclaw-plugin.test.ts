@@ -1,5 +1,11 @@
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseAntigravityJsonlEvent } from '../src/openclaw-plugin.js';
+import {
+  parseAntigravityJsonlEvent,
+  prepareExactToolHome,
+} from '../src/openclaw-plugin.js';
 
 describe('OpenClaw JSONL event parser', () => {
   it('maps session and text events', () => {
@@ -76,5 +82,81 @@ describe('OpenClaw JSONL event parser', () => {
   it('ignores malformed or unknown events', () => {
     expect(parseAntigravityJsonlEvent('not-json')).toBeNull();
     expect(parseAntigravityJsonlEvent(JSON.stringify({ type: 'mystery' }))).toBeNull();
+  });
+});
+
+describe('OpenClaw exact tool availability', () => {
+  it('isolates Antigravity and exposes only the OpenClaw MCP bridge', async () => {
+    const fixture = await mkdtemp(path.join(tmpdir(), 'antigravity-plugin-test-'));
+    const sourceHome = path.join(fixture, 'source-home');
+    const runtimeDir = path.join(sourceHome, '.gemini', 'antigravity-cli');
+    const systemSettingsPath = path.join(fixture, 'system-settings.json');
+    await mkdir(runtimeDir, { recursive: true });
+    await writeFile(path.join(runtimeDir, 'antigravity-oauth-token'), 'fixture-token');
+    await writeFile(path.join(runtimeDir, 'settings.json'), '{"unsafe":true}');
+    await writeFile(
+      systemSettingsPath,
+      JSON.stringify({
+        mcpServers: {
+          openclaw: {
+            url: 'http://127.0.0.1:1234/mcp',
+            headers: { Authorization: 'Bearer fixture' },
+            includeTools: ['message'],
+          },
+        },
+      }),
+    );
+
+    const prepared = await prepareExactToolHome({
+      toolAvailability: { native: [], openClaw: ['message'] },
+      systemSettingsPath,
+      sourceHome,
+      temporaryRoot: fixture,
+    });
+    try {
+      const settings = JSON.parse(
+        await readFile(
+          path.join(prepared.home, '.gemini', 'antigravity-cli', 'settings.json'),
+          'utf8',
+        ),
+      );
+      expect(settings.permissions.allow).toEqual(['mcp(openclaw/*)']);
+      expect(settings.permissions.deny).toContain('command(*)');
+      expect(settings.permissions.deny).toContain('read_file(*)');
+      expect(settings.unsafe).toBeUndefined();
+
+      const mcp = JSON.parse(
+        await readFile(
+          path.join(prepared.home, '.gemini', 'config', 'mcp_config.json'),
+          'utf8',
+        ),
+      );
+      expect(mcp.mcpServers.openclaw).toEqual({
+        disabled: false,
+        serverUrl: 'http://127.0.0.1:1234/mcp',
+        headers: { Authorization: 'Bearer fixture' },
+      });
+      expect(
+        await realpath(
+          path.join(
+            prepared.home,
+            '.gemini',
+            'antigravity-cli',
+            'antigravity-oauth-token',
+          ),
+        ),
+      ).toBe(path.join(runtimeDir, 'antigravity-oauth-token'));
+    } finally {
+      await prepared.cleanup();
+      await rm(fixture, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed when native tools are requested', async () => {
+    await expect(
+      prepareExactToolHome({
+        toolAvailability: { native: ['run_command'], openClaw: [] },
+      }),
+    ).rejects.toThrow('supports OpenClaw MCP tools only');
   });
 });

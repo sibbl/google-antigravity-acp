@@ -12,6 +12,7 @@ interface Options {
   conversation?: string;
   systemPromptFile?: string;
   skipPermissions: boolean;
+  disableSlashCommands: boolean;
 }
 
 function writeEvent(event: Record<string, unknown>): void {
@@ -80,7 +81,8 @@ async function main(): Promise<void> {
     .option('-e, --effort <effort>', 'Reasoning effort (low, medium, high)')
     .option('--conversation <id>', 'Resume an Antigravity conversation')
     .option('--system-prompt-file <path>', 'Read the OpenClaw system prompt from a file')
-    .option('--no-skip-permissions', 'Do not auto-approve permissions in agy');
+    .option('--no-skip-permissions', 'Do not auto-approve permissions in agy')
+    .option('--disable-slash-commands', 'Disable Antigravity slash-command and skill expansion');
 
   program.parse(process.argv);
   const options = program.opts<Options>();
@@ -108,9 +110,10 @@ async function main(): Promise<void> {
     model: options.model,
     effort: options.effort,
     dangerouslySkipPermissions: options.skipPermissions,
-    extraArgs: options.conversation
-      ? [`--conversation=${options.conversation}`]
-      : undefined,
+    extraArgs: [
+      ...(options.conversation ? [`--conversation=${options.conversation}`] : []),
+      ...(options.disableSlashCommands ? ['--disable-slash-commands'] : []),
+    ],
   });
 
   let streamedText = '';

@@ -81,8 +81,14 @@ Then select an Antigravity model and require the plugin-owned runtime:
 
 Authentication remains owned by the official `agy` installation. Normal agent
 turns use Antigravity's native tools, and their start/result events are surfaced
-to OpenClaw. OpenClaw tools are not bridged unless an explicit MCP integration
-is configured.
+to OpenClaw.
+
+For OpenClaw runs with an exact tool cap, the backend creates a private
+per-run Antigravity home, denies all native file, shell, and web permissions,
+and exposes only OpenClaw's host-isolated MCP bridge. The bridge enforces the
+requested OpenClaw tool list. Exact-cap runs that explicitly request
+Antigravity-native tools fail closed; unrestricted turns keep the normal native
+tool behavior.
 
 ### Client Configuration
 
