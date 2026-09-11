@@ -1,6 +1,6 @@
 {
   "name": "google-antigravity-acp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Agent Client Protocol (ACP) server for Google Antigravity, compatible with acpx and other ACP clients",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
