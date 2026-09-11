@@ -158,4 +158,33 @@ describe('AntigravityAcpAgent', () => {
       expect(agent?.getSession(sessionId)).toBeUndefined();
     });
   });
+
+  it('should accept the configured thinking effort through session config options', async () => {
+    agent = new AntigravityAcpAgent({
+      binaryPath: mockAgyPath,
+      defaultEffort: 'low',
+    });
+    const agentApp = agent.createApp();
+    const clientApp = acp.client({ name: 'test-client' });
+
+    await clientApp.connectWith(agentApp, async (ctx) => {
+      await ctx.request('initialize', {
+        protocolVersion: acp.PROTOCOL_VERSION,
+        clientCapabilities: {},
+      });
+
+      const sessionRes = await ctx.request('session/new', {
+        cwd: process.cwd(),
+        mcpServers: [],
+      });
+      expect(sessionRes.configOptions?.[0]?.currentValue).toBe('low');
+
+      const configRes = await ctx.request('session/set_config_option', {
+        sessionId: sessionRes.sessionId,
+        configId: 'thinking',
+        value: 'low',
+      });
+      expect(configRes.configOptions[0]?.currentValue).toBe('low');
+    });
+  });
 });

@@ -43,6 +43,27 @@ export class AntigravityAcpAgent {
       .onRequest('session/set_mode', async (_ctx) => {
         return {};
       })
+      .onRequest('session/set_config_option', async (ctx) => {
+        const sessionId = ctx.params.sessionId;
+        if (!this.sessions.has(sessionId)) {
+          throw new Error(`Session not found: ${sessionId}`);
+        }
+
+        const configuredEffort = this.options.defaultEffort;
+        if (
+          ctx.params.configId !== 'thinking' ||
+          !configuredEffort ||
+          ctx.params.value !== configuredEffort
+        ) {
+          throw new Error(
+            `Unsupported session config option: ${ctx.params.configId}=${String(ctx.params.value)}`
+          );
+        }
+
+        return {
+          configOptions: this.getConfigOptions(),
+        };
+      })
       .onRequest('session/new', async (ctx) => {
         const sessionId = randomUUID();
         const session = new AgySession({
@@ -58,6 +79,7 @@ export class AntigravityAcpAgent {
 
         return {
           sessionId,
+          configOptions: this.getConfigOptions(),
         };
       })
       .onRequest('session/prompt', async (ctx) => {
@@ -106,6 +128,27 @@ export class AntigravityAcpAgent {
           session?.cancel();
         }
       });
+  }
+
+  private getConfigOptions(): acp.SessionConfigOption[] {
+    const effort = this.options.defaultEffort;
+    if (!effort) return [];
+
+    return [
+      {
+        id: 'thinking',
+        name: 'Thinking effort',
+        category: 'thought_level',
+        type: 'select',
+        currentValue: effort,
+        options: [
+          {
+            value: effort,
+            name: effort[0].toUpperCase() + effort.slice(1),
+          },
+        ],
+      },
+    ];
   }
 
   private extractPromptText(prompt: acp.ContentBlock[] | string): string {
