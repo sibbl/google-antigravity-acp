@@ -1,0 +1,22 @@
+{
+  "id": "google-antigravity-cli",
+  "name": "Google Antigravity CLI",
+  "description": "Run Google Antigravity as a native OpenClaw CLI model backend",
+  "cliBackends": [
+    "google-antigravity-cli"
+  ],
+  "setup": {
+    "cliBackends": [
+      "google-antigravity-cli"
+    ],
+    "requiresRuntime": false
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

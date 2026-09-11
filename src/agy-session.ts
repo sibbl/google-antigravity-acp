@@ -7,6 +7,7 @@ import {
   AgySessionOptions,
   AgyStepUpdateEvent,
   AgyStreamEvent,
+  AgyUsage,
   AgyUserInputMessage,
 } from './types.js';
 
@@ -17,6 +18,7 @@ export interface PromptResult {
   conversationId: string;
   durationSeconds?: number;
   numTurns?: number;
+  usage?: AgyUsage;
 }
 
 export class AgySession extends EventEmitter {
@@ -197,6 +199,7 @@ export class AgySession extends EventEmitter {
             conversationId: event.result.conversation_id,
             durationSeconds: event.result.duration_seconds,
             numTurns: event.result.num_turns,
+            usage: event.result.usage,
           });
         });
       }

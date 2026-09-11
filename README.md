@@ -4,6 +4,11 @@ An [Agent Client Protocol (ACP)](https://agentclientprotocol.com) server for Goo
 
 This project enables any ACP-compatible client (such as Zed, OpenClaw, Neovim, and other developer tools) to communicate with Google Antigravity using standard JSON-RPC 2.0 over `stdio`.
 
+The same npm package also ships a native OpenClaw CLI backend. It exposes
+Antigravity models under the `google-antigravity-cli/*` model namespace while
+preserving Antigravity conversation IDs, streamed responses, native tool-call
+events, cancellation, and usage reporting.
+
 ---
 
 ## How It Works
@@ -44,6 +49,40 @@ npx google-antigravity-acp
 npm install -g google-antigravity-acp
 google-antigravity-acp
 ```
+
+### Install as an OpenClaw plugin
+
+```bash
+openclaw plugins install google-antigravity-acp
+openclaw config set plugins.entries.google-antigravity-cli.enabled true
+```
+
+Then select an Antigravity model and require the plugin-owned runtime:
+
+```json5
+{
+  agents: {
+    entries: {
+      fast: {
+        model: {
+          primary: "google-antigravity-cli/gemini-3.8-flash-low",
+          fallbacks: [],
+        },
+        models: {
+          "google-antigravity-cli/gemini-3.8-flash-low": {
+            agentRuntime: { id: "google-antigravity-cli" },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+Authentication remains owned by the official `agy` installation. Normal agent
+turns use Antigravity's native tools, and their start/result events are surfaced
+to OpenClaw. OpenClaw tools are not bridged unless an explicit MCP integration
+is configured.
 
 ### Client Configuration
 

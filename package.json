@@ -1,12 +1,39 @@
 {
   "name": "google-antigravity-acp",
-  "version": "1.0.1",
-  "description": "Agent Client Protocol (ACP) server for Google Antigravity, compatible with acpx and other ACP clients",
+  "version": "1.1.0",
+  "description": "ACP adapter and native OpenClaw CLI backend for Google Antigravity",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
-    "google-antigravity-acp": "dist/cli.js"
+    "google-antigravity-acp": "dist/cli.js",
+    "google-antigravity-cli": "dist/one-shot-cli.js"
+  },
+  "openclaw": {
+    "extensions": [
+      "./src/openclaw-plugin.ts"
+    ],
+    "runtimeExtensions": [
+      "./dist/openclaw-plugin.js"
+    ],
+    "install": {
+      "npmSpec": "google-antigravity-acp",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.9.3"
+    },
+    "compat": {
+      "pluginApi": ">=2026.9.3",
+      "minGatewayVersion": ">=2026.9.3"
+    },
+    "build": {
+      "openclawVersion": "2026.9.3",
+      "pluginSdkVersion": "2026.9.3"
+    },
+    "release": {
+      "publishToClawHub": true,
+      "publishToNpm": true,
+      "bundleRuntimeDependencies": false
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -15,7 +42,10 @@
     "prepublishOnly": "npm run build"
   },
   "files": [
-    "dist"
+    "dist",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
   ],
   "repository": {
     "type": "git",
@@ -43,7 +73,16 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.9",
+    "openclaw": "2026.9.3",
     "typescript": "^5.7.3",
     "vitest": "^3.0.7"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.9.3"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
   }
 }

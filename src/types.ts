@@ -37,7 +37,7 @@ export interface AgyStepUpdateEvent {
     conversation_id: string;
     step_index: number;
     state: 'ACTIVE' | 'DONE' | 'ERROR' | string;
-    step_type: 'user_input' | 'agent_response' | 'tool_call' | string;
+    step_type: 'user_input' | 'agent_response' | 'tool' | 'tool_call' | string;
     text_delta?: string;
     duration_seconds?: number;
     usage?: AgyUsage;

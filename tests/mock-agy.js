@@ -59,7 +59,7 @@ rl.on('line', (line) => {
               conversation_id: convId,
               step_index: stepIndex++,
               state: 'ACTIVE',
-              step_type: 'tool_call',
+              step_type: 'tool',
               tool_info: {
                 name: 'mock_search',
                 parameters: { query: 'test' },
@@ -75,7 +75,7 @@ rl.on('line', (line) => {
               conversation_id: convId,
               step_index: stepIndex - 1,
               state: 'DONE',
-              step_type: 'tool_call',
+              step_type: 'tool',
               tool_info: {
                 name: 'mock_search',
                 output: 'mock search output result',

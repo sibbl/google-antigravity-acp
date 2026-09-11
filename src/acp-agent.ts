@@ -195,7 +195,7 @@ export class AntigravityAcpAgent {
           },
         });
       }
-    } else if (step.step_type === 'tool_call') {
+    } else if (step.step_type === 'tool' || step.step_type === 'tool_call') {
       const toolCallId = `step_${step.step_index}`;
       const toolName = step.tool_info?.name ?? 'tool_execution';
 
