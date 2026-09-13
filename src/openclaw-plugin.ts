@@ -34,7 +34,6 @@ const RUNTIME_STATE_PASSTHROUGH = [
   'installation_id',
   'conversations',
   'conversation_summaries.db',
-  'cache',
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -120,6 +119,9 @@ export async function prepareExactToolHome(params: {
     const settings = {
       toolPermission: 'strict',
       artifactReviewPolicy: 'asks-for-review',
+      mcp: {
+        allowed: exposesOpenClawTools ? ['openclaw'] : [],
+      },
       permissions: {
         allow: params.toolAvailability.openClaw.map(
           (tool) => `mcp(openclaw/${tool})`,

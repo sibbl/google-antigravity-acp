@@ -131,6 +131,7 @@ describe('OpenClaw exact tool availability', () => {
           'utf8',
         ),
       );
+      expect(settings.mcp.allowed).toEqual(['openclaw']);
       expect(settings.permissions.allow).toEqual(['mcp(openclaw/message)']);
       expect(settings.permissions.deny).toContain('command(*)');
       expect(settings.permissions.deny).toContain('read_file(*)');

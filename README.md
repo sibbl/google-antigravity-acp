@@ -90,7 +90,8 @@ exposes only OpenClaw's host-isolated MCP bridge. Antigravity and the bridge
 both enforce the requested OpenClaw tool list. Ambient user/workspace plugins,
 skills, hooks, rules, and agents are excluded. Exact-cap runs require
 Antigravity CLI 1.1.9 or newer and fail closed when native tools are requested;
-unrestricted turns keep the normal native tool behavior.
+unrestricted turns keep the normal native tool behavior and additionally receive
+the OpenClaw MCP bridge.
 
 ### Client Configuration
 
