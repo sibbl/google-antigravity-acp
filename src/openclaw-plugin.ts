@@ -6,7 +6,6 @@ import {
   mkdir,
   mkdtemp,
   readFile,
-  readdir,
   rm,
   symlink,
   writeFile,
@@ -26,8 +25,17 @@ type ToolAvailability = {
 
 type ExactToolHome = {
   home: string;
+  workspace: string;
   cleanup: () => Promise<void>;
 };
+
+const RUNTIME_STATE_PASSTHROUGH = [
+  'antigravity-oauth-token',
+  'installation_id',
+  'conversations',
+  'conversation_summaries.db',
+  'cache',
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -101,16 +109,21 @@ export async function prepareExactToolHome(params: {
     const targetRuntime = path.join(targetGemini, 'antigravity-cli');
     await mkdir(targetRuntime, { recursive: true, mode: 0o700 });
 
-    for (const entry of await readdir(sourceRuntime)) {
-      if (entry === 'settings.json') continue;
-      await symlink(path.join(sourceRuntime, entry), path.join(targetRuntime, entry));
+    for (const entry of RUNTIME_STATE_PASSTHROUGH) {
+      await symlink(path.join(sourceRuntime, entry), path.join(targetRuntime, entry)).catch(
+        (error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error;
+        },
+      );
     }
 
     const settings = {
       toolPermission: 'strict',
       artifactReviewPolicy: 'asks-for-review',
       permissions: {
-        allow: exposesOpenClawTools ? ['mcp(openclaw/*)'] : [],
+        allow: params.toolAvailability.openClaw.map(
+          (tool) => `mcp(openclaw/${tool})`,
+        ),
         deny: [
           'read_file(*)',
           'write_file(*)',
@@ -137,8 +150,12 @@ export async function prepareExactToolHome(params: {
       { mode: 0o600 },
     );
 
+    const workspace = path.join(home, 'workspace');
+    await mkdir(workspace, { mode: 0o700 });
+
     return {
       home,
+      workspace,
       cleanup: async () => {
         await rm(home, { recursive: true, force: true });
       },
@@ -265,6 +282,7 @@ function buildBackend(): Parameters<OpenClawPluginApi['registerCliBackend']>[0] 
     bundleMcpMode: 'gemini-system-settings',
     nativeToolMode: 'selectable',
     toolAvailabilityEnforcement: 'prepare-execution',
+    isolatesInstructionsWithExactTools: true,
     ownsNativeCompaction: true,
     liveTest: {
       defaultModelRef: `${BACKEND_ID}/${DEFAULT_MODEL}`,
@@ -309,7 +327,11 @@ function buildBackend(): Parameters<OpenClawPluginApi['registerCliBackend']>[0] 
         systemSettingsPath: ctx.env?.GEMINI_CLI_SYSTEM_SETTINGS_PATH,
       });
       return {
-        env: { HOME: exactHome.home },
+        env: {
+          HOME: exactHome.home,
+          OPENCLAW_ANTIGRAVITY_EXACT_TOOLS: '1',
+          OPENCLAW_ANTIGRAVITY_EXACT_CWD: exactHome.workspace,
+        },
         cleanup: exactHome.cleanup,
         toolAvailabilityEnforced: true,
       };

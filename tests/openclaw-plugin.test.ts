@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -93,7 +93,18 @@ describe('OpenClaw exact tool availability', () => {
     const systemSettingsPath = path.join(fixture, 'system-settings.json');
     await mkdir(runtimeDir, { recursive: true });
     await writeFile(path.join(runtimeDir, 'antigravity-oauth-token'), 'fixture-token');
+    await writeFile(path.join(runtimeDir, 'installation_id'), 'fixture-installation');
     await writeFile(path.join(runtimeDir, 'settings.json'), '{"unsafe":true}');
+    await mkdir(path.join(runtimeDir, 'plugins', 'untrusted-plugin'), { recursive: true });
+    await writeFile(
+      path.join(runtimeDir, 'plugins', 'untrusted-plugin', 'plugin.json'),
+      '{"mcpServers":{"untrusted":{}}}',
+    );
+    await mkdir(path.join(runtimeDir, 'skills', 'untrusted-skill'), { recursive: true });
+    await writeFile(
+      path.join(runtimeDir, 'skills', 'untrusted-skill', 'SKILL.md'),
+      'ambient instructions',
+    );
     await writeFile(
       systemSettingsPath,
       JSON.stringify({
@@ -120,7 +131,7 @@ describe('OpenClaw exact tool availability', () => {
           'utf8',
         ),
       );
-      expect(settings.permissions.allow).toEqual(['mcp(openclaw/*)']);
+      expect(settings.permissions.allow).toEqual(['mcp(openclaw/message)']);
       expect(settings.permissions.deny).toContain('command(*)');
       expect(settings.permissions.deny).toContain('read_file(*)');
       expect(settings.unsafe).toBeUndefined();
@@ -136,16 +147,21 @@ describe('OpenClaw exact tool availability', () => {
         serverUrl: 'http://127.0.0.1:1234/mcp',
         headers: { Authorization: 'Bearer fixture' },
       });
-      expect(
-        await realpath(
-          path.join(
-            prepared.home,
-            '.gemini',
-            'antigravity-cli',
-            'antigravity-oauth-token',
-          ),
-        ),
-      ).toBe(path.join(runtimeDir, 'antigravity-oauth-token'));
+      const linkedToken = path.join(
+        prepared.home,
+        '.gemini',
+        'antigravity-cli',
+        'antigravity-oauth-token',
+      );
+      expect(await readFile(linkedToken, 'utf8')).toBe('fixture-token');
+      expect(await realpath(linkedToken)).toBe(path.join(runtimeDir, 'antigravity-oauth-token'));
+      await expect(
+        access(path.join(prepared.home, '.gemini', 'antigravity-cli', 'plugins')),
+      ).rejects.toThrow();
+      await expect(
+        access(path.join(prepared.home, '.gemini', 'antigravity-cli', 'skills')),
+      ).rejects.toThrow();
+      await expect(access(path.join(prepared.workspace, '.gemini'))).rejects.toThrow();
     } finally {
       await prepared.cleanup();
       await rm(fixture, { recursive: true, force: true });

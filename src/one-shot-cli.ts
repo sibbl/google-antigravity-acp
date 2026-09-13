@@ -2,7 +2,11 @@
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
 import { AgySession } from './agy-session.js';
-import { initializeHostSecurityEnvironment, resolveAgy } from './binary.js';
+import {
+  assertExactToolAgyVersion,
+  initializeHostSecurityEnvironment,
+  resolveAgy,
+} from './binary.js';
 import type { AgyStepUpdateEvent, AgyUsage } from './types.js';
 
 interface Options {
@@ -101,12 +105,16 @@ async function main(): Promise<void> {
       : Promise.resolve(''),
   ]);
 
+  if (process.env.OPENCLAW_ANTIGRAVITY_EXACT_TOOLS === '1') {
+    await assertExactToolAgyVersion(binaryPath);
+  }
+
   const prompt = systemPrompt
     ? `<openclaw_system_instructions>\n${systemPrompt}\n</openclaw_system_instructions>\n\n${userPrompt}`
     : userPrompt;
   const session = new AgySession({
     binaryPath,
-    cwd: process.cwd(),
+    cwd: process.env.OPENCLAW_ANTIGRAVITY_EXACT_CWD ?? process.cwd(),
     model: options.model,
     effort: options.effort,
     dangerouslySkipPermissions: options.skipPermissions,
