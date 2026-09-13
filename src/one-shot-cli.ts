@@ -2,7 +2,11 @@
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
 import { AgySession } from './agy-session.js';
-import { initializeHostSecurityEnvironment, resolveAgy } from './binary.js';
+import {
+  assertExactToolAgyVersion,
+  initializeHostSecurityEnvironment,
+  resolveAgy,
+} from './binary.js';
 import type { AgyStepUpdateEvent, AgyUsage } from './types.js';
 
 interface Options {
@@ -12,6 +16,7 @@ interface Options {
   conversation?: string;
   systemPromptFile?: string;
   skipPermissions: boolean;
+  disableSlashCommands: boolean;
 }
 
 function writeEvent(event: Record<string, unknown>): void {
@@ -80,7 +85,8 @@ async function main(): Promise<void> {
     .option('-e, --effort <effort>', 'Reasoning effort (low, medium, high)')
     .option('--conversation <id>', 'Resume an Antigravity conversation')
     .option('--system-prompt-file <path>', 'Read the OpenClaw system prompt from a file')
-    .option('--no-skip-permissions', 'Do not auto-approve permissions in agy');
+    .option('--no-skip-permissions', 'Do not auto-approve permissions in agy')
+    .option('--disable-slash-commands', 'Disable Antigravity slash-command and skill expansion');
 
   program.parse(process.argv);
   const options = program.opts<Options>();
@@ -99,18 +105,23 @@ async function main(): Promise<void> {
       : Promise.resolve(''),
   ]);
 
+  if (process.env.OPENCLAW_ANTIGRAVITY_EXACT_TOOLS === '1') {
+    await assertExactToolAgyVersion(binaryPath);
+  }
+
   const prompt = systemPrompt
     ? `<openclaw_system_instructions>\n${systemPrompt}\n</openclaw_system_instructions>\n\n${userPrompt}`
     : userPrompt;
   const session = new AgySession({
     binaryPath,
-    cwd: process.cwd(),
+    cwd: process.env.OPENCLAW_ANTIGRAVITY_EXACT_CWD ?? process.cwd(),
     model: options.model,
     effort: options.effort,
     dangerouslySkipPermissions: options.skipPermissions,
-    extraArgs: options.conversation
-      ? [`--conversation=${options.conversation}`]
-      : undefined,
+    extraArgs: [
+      ...(options.conversation ? [`--conversation=${options.conversation}`] : []),
+      ...(options.disableSlashCommands ? ['--disable-slash-commands'] : []),
+    ],
   });
 
   let streamedText = '';

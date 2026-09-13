@@ -1,10 +1,15 @@
+import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  assertExactToolAgyVersion,
   findSystemAgy,
   getBinaryVersion,
   getInstalledTargetPath,
   getPlatformKey,
   isVersionSufficient,
+  MIN_EXACT_TOOL_AGY_VERSION,
   pathExists,
 } from '../src/binary.js';
 
@@ -38,6 +43,8 @@ describe('binary utilities', () => {
     expect(isVersionSufficient('1.1.7', '1.1.8')).toBe(false);
     expect(isVersionSufficient('2.0.0', '1.1.8')).toBe(true);
     expect(isVersionSufficient('1.2.1', '1.2.0')).toBe(true);
+    expect(isVersionSufficient('1.1.8', MIN_EXACT_TOOL_AGY_VERSION)).toBe(false);
+    expect(isVersionSufficient('1.1.9', MIN_EXACT_TOOL_AGY_VERSION)).toBe(true);
   });
 
   it('should find system agy binary and verify its version', async () => {
@@ -47,6 +54,23 @@ describe('binary utilities', () => {
       const version = await getBinaryVersion(agyPath);
       expect(version).toBeTruthy();
       expect(isVersionSufficient(version!)).toBe(true);
+    }
+  });
+
+  it('requires agy 1.1.9 or newer for exact-tool runs', async () => {
+    const fixture = await mkdtemp(path.join(tmpdir(), 'agy-version-test-'));
+    const binary = path.join(fixture, 'agy');
+    try {
+      await writeFile(binary, '#!/bin/sh\necho 1.1.8\n');
+      await chmod(binary, 0o755);
+      await expect(assertExactToolAgyVersion(binary)).rejects.toThrow(
+        'requires Antigravity CLI 1.1.9 or newer',
+      );
+
+      await writeFile(binary, '#!/bin/sh\necho 1.1.9\n');
+      await expect(assertExactToolAgyVersion(binary)).resolves.toBeUndefined();
+    } finally {
+      await rm(fixture, { recursive: true, force: true });
     }
   });
 });

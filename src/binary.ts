@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 
 export const MIN_AGY_VERSION = '1.1.8';
+export const MIN_EXACT_TOOL_AGY_VERSION = '1.1.9';
 export const DEFAULT_RELEASE_BASE_URL = 'https://storage.googleapis.com/antigravity-public/antigravity-cli';
 
 export const MACOS_SYSTEM_CA_PATH = '/etc/ssl/cert.pem';
@@ -97,6 +98,15 @@ export async function getBinaryVersion(binaryPath: string): Promise<string | nul
     return match ? match[1] : stdout.trim();
   } catch {
     return null;
+  }
+}
+
+export async function assertExactToolAgyVersion(binaryPath: string): Promise<void> {
+  const version = await getBinaryVersion(binaryPath);
+  if (!version || !isVersionSufficient(version, MIN_EXACT_TOOL_AGY_VERSION)) {
+    throw new Error(
+      `Exact tool availability requires Antigravity CLI ${MIN_EXACT_TOOL_AGY_VERSION} or newer`,
+    );
   }
 }
 
