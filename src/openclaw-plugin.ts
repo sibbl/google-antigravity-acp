@@ -46,7 +46,20 @@ async function readJsonObject(filePath: string): Promise<Record<string, unknown>
   return parsed;
 }
 
-function toAntigravityMcpServer(server: Record<string, unknown>): Record<string, unknown> {
+function resolveHeaderValue(value: string, env: NodeJS.ProcessEnv): string {
+  const match = /^(Bearer )?\$\{([A-Z0-9_]+)\}$/.exec(value);
+  if (!match) return value;
+  const resolved = env[match[2]];
+  if (!resolved) {
+    throw new Error(`OpenClaw MCP header requires environment variable ${match[2]}`);
+  }
+  return `${match[1] ?? ''}${resolved}`;
+}
+
+function toAntigravityMcpServer(
+  server: Record<string, unknown>,
+  env: NodeJS.ProcessEnv,
+): Record<string, unknown> {
   const serverUrl =
     typeof server.serverUrl === 'string'
       ? server.serverUrl
@@ -59,7 +72,15 @@ function toAntigravityMcpServer(server: Record<string, unknown>): Record<string,
   return {
     disabled: false,
     serverUrl,
-    ...(isRecord(server.headers) ? { headers: server.headers } : {}),
+    ...(isRecord(server.headers)
+      ? {
+          headers: Object.fromEntries(
+            Object.entries(server.headers).flatMap(([name, value]) =>
+              typeof value === 'string' ? [[name, resolveHeaderValue(value, env)]] : [],
+            ),
+          ),
+        }
+      : {}),
   };
 }
 
@@ -71,6 +92,7 @@ function toAntigravityMcpServer(server: Record<string, unknown>): Record<string,
 export async function prepareExactToolHome(params: {
   toolAvailability: ToolAvailability;
   systemSettingsPath?: string;
+  env?: NodeJS.ProcessEnv;
   sourceHome?: string;
   temporaryRoot?: string;
 }): Promise<ExactToolHome> {
@@ -94,7 +116,7 @@ export async function prepareExactToolHome(params: {
     if (!candidate) {
       throw new Error('Antigravity exact tool availability requires the OpenClaw MCP server');
     }
-    openClawServer = toAntigravityMcpServer(candidate);
+    openClawServer = toAntigravityMcpServer(candidate, params.env ?? process.env);
   }
 
   const home = await mkdtemp(
@@ -327,6 +349,7 @@ function buildBackend(): Parameters<OpenClawPluginApi['registerCliBackend']>[0] 
       const exactHome = await prepareExactToolHome({
         toolAvailability: ctx.toolAvailability,
         systemSettingsPath: ctx.env?.GEMINI_CLI_SYSTEM_SETTINGS_PATH,
+        env: ctx.env,
       });
       return {
         env: {

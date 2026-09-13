@@ -111,7 +111,7 @@ describe('OpenClaw exact tool availability', () => {
         mcpServers: {
           openclaw: {
             url: 'http://127.0.0.1:1234/mcp',
-            headers: { Authorization: 'Bearer fixture' },
+            headers: { Authorization: 'Bearer ${OPENCLAW_MCP_TEST_TOKEN}' },
             includeTools: ['message'],
           },
         },
@@ -121,6 +121,7 @@ describe('OpenClaw exact tool availability', () => {
     const prepared = await prepareExactToolHome({
       toolAvailability: { native: [], openClaw: ['message'] },
       systemSettingsPath,
+      env: { OPENCLAW_MCP_TEST_TOKEN: 'fixture' },
       sourceHome,
       temporaryRoot: fixture,
     });
