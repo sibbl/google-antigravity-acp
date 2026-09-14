@@ -7,6 +7,16 @@ import {
   prepareExactToolHome,
 } from '../src/openclaw-plugin.js';
 
+describe('OpenClaw plugin manifest', () => {
+  it('declares native CLI authentication for the model provider', async () => {
+    const manifest = JSON.parse(
+      await readFile(new URL('../openclaw.plugin.json', import.meta.url), 'utf8'),
+    );
+
+    expect(manifest.syntheticAuthRefs).toEqual(['google-antigravity-cli']);
+  });
+});
+
 describe('OpenClaw JSONL event parser', () => {
   it('maps session and text events', () => {
     expect(

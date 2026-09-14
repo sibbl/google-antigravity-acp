@@ -5,6 +5,9 @@
   "cliBackends": [
     "google-antigravity-cli"
   ],
+  "syntheticAuthRefs": [
+    "google-antigravity-cli"
+  ],
   "setup": {
     "cliBackends": [
       "google-antigravity-cli"
