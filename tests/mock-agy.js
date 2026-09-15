@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline';
 
+if (process.env.MOCK_EXPECT_ARG && !process.argv.includes(process.env.MOCK_EXPECT_ARG)) {
+  process.stderr.write(`Missing expected argument: ${process.env.MOCK_EXPECT_ARG}\n`);
+  process.exit(2);
+}
+
 const rl = createInterface({
   input: process.stdin,
   terminal: false,

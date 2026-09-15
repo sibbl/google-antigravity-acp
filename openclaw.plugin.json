@@ -5,6 +5,27 @@
   "cliBackends": [
     "google-antigravity-cli"
   ],
+  "modelCatalog": {
+    "providers": {
+      "google-antigravity-cli": {
+        "defaultModel": "gemini-3.8-flash-low",
+        "models": [
+          {
+            "id": "gemini-3.8-flash-low",
+            "name": "Gemini 3.8 Flash (Low)",
+            "input": [
+              "text"
+            ],
+            "reasoning": true,
+            "tags": [
+              "cli",
+              "antigravity"
+            ]
+          }
+        ]
+      }
+    }
+  },
   "syntheticAuthRefs": [
     "google-antigravity-cli"
   ],
