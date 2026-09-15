@@ -31,6 +31,17 @@ describe('AgySession', () => {
     expect(session.getConversationId()).toBe('mock-conv-1234');
   });
 
+  it('should extend the agy print timeout beyond its five-minute default', async () => {
+    session = new AgySession({
+      binaryPath: mockAgyPath,
+      cwd: process.cwd(),
+      env: { MOCK_EXPECT_ARG: '--print-timeout=60m' },
+    });
+
+    const init = await session.start();
+    expect(init.event).toBe('init');
+  });
+
   it('should stream step updates and resolve prompt result', async () => {
     session = new AgySession({
       binaryPath: mockAgyPath,

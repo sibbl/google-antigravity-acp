@@ -57,6 +57,7 @@ export class AgySession extends EventEmitter {
     const args: string[] = [
       '--input-format=stream-json',
       '--output-format=stream-json',
+      `--print-timeout=${this.options.printTimeout ?? '60m'}`,
     ];
 
     if (this.options.dangerouslySkipPermissions ?? true) {
