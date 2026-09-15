@@ -1,6 +1,6 @@
 {
   "name": "google-antigravity-acp",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "ACP adapter and native OpenClaw CLI backend for Google Antigravity",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

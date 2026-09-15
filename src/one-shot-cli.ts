@@ -2,12 +2,12 @@
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
 import { AgySession } from './agy-session.js';
+import { projectResult, projectStep } from './one-shot-events.js';
 import {
   assertExactToolAgyVersion,
   initializeHostSecurityEnvironment,
   resolveAgy,
 } from './binary.js';
-import type { AgyStepUpdateEvent, AgyUsage } from './types.js';
 
 interface Options {
   binaryPath?: string;
@@ -29,51 +29,6 @@ async function readStdin(): Promise<string> {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
   }
   return Buffer.concat(chunks).toString('utf8');
-}
-
-function usageRecord(usage: AgyUsage | undefined): Record<string, number> | undefined {
-  if (!usage) return undefined;
-  return {
-    input_tokens: usage.input_tokens,
-    output_tokens: usage.output_tokens,
-    ...(usage.thinking_tokens === undefined
-      ? {}
-      : { thinking_tokens: usage.thinking_tokens }),
-    ...(usage.cache_read_tokens === undefined
-      ? {}
-      : { cache_read_tokens: usage.cache_read_tokens }),
-    total_tokens: usage.total_tokens,
-  };
-}
-
-function projectStep(event: AgyStepUpdateEvent): string {
-  const step = event.step_update;
-  if (step.step_type === 'agent_response' && step.text_delta) {
-    writeEvent({ type: 'text', text: step.text_delta });
-    return step.text_delta;
-  }
-  // agy releases have used both names for native tool steps.
-  if (step.step_type !== 'tool' && step.step_type !== 'tool_call') return '';
-
-  const id = `${step.conversation_id}:${step.step_index}`;
-  const name = step.tool_info?.name ?? 'tool_execution';
-  if (step.state === 'ACTIVE') {
-    writeEvent({
-      type: 'tool_start',
-      tool_call_id: id,
-      name,
-      args: step.tool_info?.parameters,
-    });
-  } else if (step.state === 'DONE' || step.state === 'ERROR') {
-    writeEvent({
-      type: 'tool_result',
-      tool_call_id: id,
-      name,
-      is_error: step.state === 'ERROR',
-      result: step.tool_info?.output,
-    });
-  }
-  return '';
 }
 
 async function main(): Promise<void> {
@@ -124,7 +79,6 @@ async function main(): Promise<void> {
     ],
   });
 
-  let streamedText = '';
   let terminating = false;
   const terminate = () => {
     if (terminating) return;
@@ -141,19 +95,11 @@ async function main(): Promise<void> {
     const init = await session.start();
     writeEvent({ type: 'session', conversation_id: init.conversation_id });
     const result = await session.prompt(prompt, (event) => {
-      streamedText += projectStep(event);
+      const projected = projectStep(event);
+      if (projected) writeEvent(projected);
     });
 
-    writeEvent({
-      type: 'result',
-      status: result.status,
-      conversation_id: result.conversationId,
-      ...(streamedText.length === 0 && result.response
-        ? { text: result.response }
-        : {}),
-      ...(result.error ? { error: result.error } : {}),
-      usage: usageRecord(result.usage),
-    });
+    writeEvent(projectResult(result));
     if (result.status === 'ERROR') process.exitCode = 1;
   } finally {
     session.close();
