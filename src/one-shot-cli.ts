@@ -2,7 +2,12 @@
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
 import { AgySession } from './agy-session.js';
-import { projectResult, projectStep } from './one-shot-events.js';
+import {
+  collectAgentResponse,
+  lastAgentResponse,
+  projectResult,
+  projectStep,
+} from './one-shot-events.js';
 import {
   assertExactToolAgyVersion,
   initializeHostSecurityEnvironment,
@@ -94,12 +99,14 @@ async function main(): Promise<void> {
   try {
     const init = await session.start();
     writeEvent({ type: 'session', conversation_id: init.conversation_id });
+    const agentResponses = new Map<number, string>();
     const result = await session.prompt(prompt, (event) => {
+      collectAgentResponse(agentResponses, event);
       const projected = projectStep(event);
       if (projected) writeEvent(projected);
     });
 
-    writeEvent(projectResult(result));
+    writeEvent(projectResult(result, lastAgentResponse(agentResponses)));
     if (result.status === 'ERROR') process.exitCode = 1;
   } finally {
     session.close();

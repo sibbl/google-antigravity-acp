@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { projectResult, projectStep } from '../src/one-shot-events.js';
+import {
+  collectAgentResponse,
+  lastAgentResponse,
+  projectResult,
+  projectStep,
+} from '../src/one-shot-events.js';
 
 describe('OpenClaw one-shot event projection', () => {
   it('keeps intermediate agent responses separate from the final answer', () => {
@@ -27,5 +32,54 @@ describe('OpenClaw one-shot event projection', () => {
       text: 'Done.',
       usage: undefined,
     });
+  });
+
+  it('uses the last agent response when the terminal result has no response', () => {
+    const responses = new Map<number, string>();
+    for (const [stepIndex, state, textDelta] of [
+      [1, 'ACTIVE', 'Still working...'],
+      [2, 'ACTIVE', 'Done via '],
+      [2, 'DONE', 'agent_response.'],
+    ] as const) {
+      collectAgentResponse(responses, {
+        event: 'step_update',
+        step_update: {
+          conversation_id: 'conv-123',
+          step_index: stepIndex,
+          state,
+          step_type: 'agent_response',
+          text_delta: textDelta,
+        },
+      });
+    }
+    const result = projectResult(
+      {
+        status: 'SUCCESS',
+        response: '',
+        conversationId: 'conv-123',
+      },
+      lastAgentResponse(responses),
+    );
+
+    expect(result).toEqual({
+      type: 'result',
+      status: 'SUCCESS',
+      conversation_id: 'conv-123',
+      text: 'Done via agent_response.',
+      usage: undefined,
+    });
+  });
+
+  it('prefers the authoritative terminal response over the fallback', () => {
+    const result = projectResult(
+      {
+        status: 'SUCCESS',
+        response: 'Authoritative result.',
+        conversationId: 'conv-123',
+      },
+      'Intermediate update.',
+    );
+
+    expect(result).toMatchObject({ text: 'Authoritative result.' });
   });
 });

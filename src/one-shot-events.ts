@@ -2,6 +2,25 @@ import type { PromptResult } from './agy-session.js';
 import type { AgyStepUpdateEvent, AgyUsage } from './types.js';
 
 export type OneShotEvent = Record<string, unknown>;
+export type AgentResponseBuffer = Map<number, string>;
+
+export function collectAgentResponse(
+  responses: AgentResponseBuffer,
+  event: AgyStepUpdateEvent,
+): void {
+  const step = event.step_update;
+  if (step.step_type !== 'agent_response' || !step.text_delta) return;
+  responses.set(
+    step.step_index,
+    `${responses.get(step.step_index) ?? ''}${step.text_delta}`,
+  );
+}
+
+export function lastAgentResponse(
+  responses: AgentResponseBuffer,
+): string | undefined {
+  return [...responses.entries()].sort(([left], [right]) => right - left)[0]?.[1];
+}
 
 export function usageRecord(
   usage: AgyUsage | undefined,
@@ -50,12 +69,16 @@ export function projectStep(event: AgyStepUpdateEvent): OneShotEvent | undefined
   return undefined;
 }
 
-export function projectResult(result: PromptResult): OneShotEvent {
+export function projectResult(
+  result: PromptResult,
+  fallbackText?: string,
+): OneShotEvent {
+  const text = result.response || fallbackText;
   return {
     type: 'result',
     status: result.status,
     conversation_id: result.conversationId,
-    ...(result.response ? { text: result.response } : {}),
+    ...(text ? { text } : {}),
     ...(result.error ? { error: result.error } : {}),
     usage: usageRecord(result.usage),
   };
