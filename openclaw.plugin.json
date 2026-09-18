@@ -21,6 +21,54 @@
               "cli",
               "antigravity"
             ]
+          },
+          {
+            "id": "gemini-3.8-flash-medium",
+            "name": "Gemini 3.8 Flash (Medium)",
+            "input": [
+              "text"
+            ],
+            "reasoning": true,
+            "tags": [
+              "cli",
+              "antigravity"
+            ]
+          },
+          {
+            "id": "gemini-3.8-flash-high",
+            "name": "Gemini 3.8 Flash (High)",
+            "input": [
+              "text"
+            ],
+            "reasoning": true,
+            "tags": [
+              "cli",
+              "antigravity"
+            ]
+          },
+          {
+            "id": "gemini-3.1-pro-low",
+            "name": "Gemini 3.1 Pro (Low)",
+            "input": [
+              "text"
+            ],
+            "reasoning": true,
+            "tags": [
+              "cli",
+              "antigravity"
+            ]
+          },
+          {
+            "id": "gemini-3.1-pro-high",
+            "name": "Gemini 3.1 Pro (High)",
+            "input": [
+              "text"
+            ],
+            "reasoning": true,
+            "tags": [
+              "cli",
+              "antigravity"
+            ]
           }
         ]
       }
