@@ -42,7 +42,7 @@ export function usageRecord(
 export function projectStep(event: AgyStepUpdateEvent): OneShotEvent | undefined {
   const step = event.step_update;
   if (step.step_type === 'agent_response' && step.text_delta) {
-    return { type: 'thinking', text: step.text_delta };
+    return { type: 'text', text: step.text_delta };
   }
   // agy releases have used both names for native tool steps.
   if (step.step_type !== 'tool' && step.step_type !== 'tool_call') return undefined;
