@@ -32,6 +32,7 @@ export class AgySession extends EventEmitter {
   private currentPromptResolve: ((result: PromptResult) => void) | null = null;
   private currentPromptEventHandler: ((event: AgyStepUpdateEvent) => void | Promise<void>) | null = null;
   private pendingEventPromises: Promise<void>[] = [];
+  private forceKillTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly options: AgySessionOptions) {
     super();
@@ -46,7 +47,7 @@ export class AgySession extends EventEmitter {
   }
 
   public isRunning(): boolean {
-    return this.process !== null && !this.process.killed && this.process.exitCode === null;
+    return !this.isClosing && this.process !== null && !this.process.killed && this.process.exitCode === null;
   }
 
   public async start(): Promise<AgyInitEvent> {
@@ -57,6 +58,7 @@ export class AgySession extends EventEmitter {
     const args: string[] = [
       '--input-format=stream-json',
       '--output-format=stream-json',
+      `--print-timeout=${this.options.printTimeout ?? '60m'}`,
     ];
 
     if (this.options.dangerouslySkipPermissions ?? true) {
@@ -90,6 +92,9 @@ export class AgySession extends EventEmitter {
         ...(this.options.env ?? {}),
       },
       stdio: ['pipe', 'pipe', 'pipe'],
+      // Keep agy and every process it starts in a dedicated process group so
+      // OpenClaw cancellation can reliably tear down the whole tree.
+      detached: process.platform !== 'win32',
     });
 
     this.process = child;
@@ -207,6 +212,10 @@ export class AgySession extends EventEmitter {
   }
 
   private handleProcessExit(code: number | null, signal: string | null): void {
+    if (this.forceKillTimer) {
+      clearTimeout(this.forceKillTimer);
+      this.forceKillTimer = null;
+    }
     this.stdoutRl?.close();
     this.stderrRl?.close();
     this.stdoutRl = null;
@@ -222,6 +231,30 @@ export class AgySession extends EventEmitter {
     }
 
     this.emit('exit', code, signal);
+  }
+
+  private signalProcessTree(signal: NodeJS.Signals): void {
+    const child = this.process;
+    if (!child || child.exitCode !== null || child.pid === undefined) return;
+
+    try {
+      if (process.platform === 'win32') {
+        child.kill(signal);
+      } else {
+        process.kill(-child.pid, signal);
+      }
+    } catch {
+      // The process tree may already have exited between the state check and signal.
+    }
+  }
+
+  private scheduleForceKill(): void {
+    if (this.forceKillTimer) return;
+    this.forceKillTimer = setTimeout(() => {
+      this.forceKillTimer = null;
+      this.signalProcessTree('SIGKILL');
+    }, 2_000);
+    this.forceKillTimer.unref();
   }
 
   public async prompt(
@@ -271,13 +304,10 @@ export class AgySession extends EventEmitter {
       this.currentPromptReject = null;
       this.currentPromptEventHandler = null;
 
-      // Send SIGINT to agy to cancel turn
+      // Cancel agy and any tool/browser subprocesses it started.
       if (this.process && this.isRunning()) {
-        try {
-          this.process.kill('SIGINT');
-        } catch {
-          // Process might already be stopping
-        }
+        this.signalProcessTree('SIGINT');
+        this.scheduleForceKill();
       }
 
       reject(new Error('Prompt was cancelled'));
@@ -288,13 +318,14 @@ export class AgySession extends EventEmitter {
     this.isClosing = true;
     this.cancel();
 
-    if (this.process && this.isRunning()) {
+    if (this.process && this.process.exitCode === null) {
       try {
         this.process.stdin?.end();
-        this.process.kill('SIGTERM');
       } catch {
         // Ignore
       }
+      this.signalProcessTree('SIGTERM');
+      this.scheduleForceKill();
     }
   }
 }

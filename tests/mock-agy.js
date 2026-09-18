@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline';
+import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+
+if (process.env.MOCK_EXPECT_ARG && !process.argv.includes(process.env.MOCK_EXPECT_ARG)) {
+  process.stderr.write(`Missing expected argument: ${process.env.MOCK_EXPECT_ARG}\n`);
+  process.exit(2);
+}
 
 const rl = createInterface({
   input: process.stdin,
@@ -7,6 +14,13 @@ const rl = createInterface({
 });
 
 const convId = 'mock-conv-1234';
+
+if (process.env.MOCK_GRANDCHILD_PID_FILE) {
+  const grandchild = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+    stdio: 'ignore',
+  });
+  writeFileSync(process.env.MOCK_GRANDCHILD_PID_FILE, String(grandchild.pid));
+}
 
 // Emit init event immediately
 process.stdout.write(

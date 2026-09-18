@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { AgySession } from '../src/agy-session.js';
 import { AgyStepUpdateEvent } from '../src/types.js';
 
@@ -29,6 +31,17 @@ describe('AgySession', () => {
     expect(init.conversation_id).toBe('mock-conv-1234');
     expect(session.isRunning()).toBe(true);
     expect(session.getConversationId()).toBe('mock-conv-1234');
+  });
+
+  it('should extend the agy print timeout beyond its five-minute default', async () => {
+    session = new AgySession({
+      binaryPath: mockAgyPath,
+      cwd: process.cwd(),
+      env: { MOCK_EXPECT_ARG: '--print-timeout=60m' },
+    });
+
+    const init = await session.start();
+    expect(init.event).toBe('init');
   });
 
   it('should stream step updates and resolve prompt result', async () => {
@@ -93,5 +106,52 @@ describe('AgySession', () => {
 
     session.close();
     expect(session.isRunning()).toBe(false);
+  });
+
+  it('should terminate the entire agy process tree on close', async () => {
+    if (process.platform === 'win32') return;
+
+    const tempDir = await mkdtemp(join(tmpdir(), 'agy-process-tree-'));
+    const pidFile = join(tempDir, 'grandchild.pid');
+    session = new AgySession({
+      binaryPath: mockAgyPath,
+      cwd: process.cwd(),
+      env: { MOCK_GRANDCHILD_PID_FILE: pidFile },
+    });
+
+    try {
+      await session.start();
+      let grandchildPid = 0;
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        try {
+          grandchildPid = Number(await readFile(pidFile, 'utf8'));
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      expect(grandchildPid).toBeGreaterThan(0);
+
+      session.close();
+
+      let alive = true;
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        try {
+          const stat = await readFile(`/proc/${grandchildPid}/stat`, 'utf8');
+          const state = stat.slice(stat.lastIndexOf(') ') + 2).split(' ')[0];
+          if (state === 'Z') {
+            alive = false;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        } catch {
+          alive = false;
+          break;
+        }
+      }
+      expect(alive).toBe(false);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

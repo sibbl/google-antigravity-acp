@@ -74,6 +74,7 @@ export interface AgySessionOptions {
   model?: string;
   effort?: 'low' | 'medium' | 'high';
   dangerouslySkipPermissions?: boolean;
+  printTimeout?: string;
   extraArgs?: string[];
   env?: Record<string, string>;
 }
