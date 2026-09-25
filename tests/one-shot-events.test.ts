@@ -7,8 +7,8 @@ import {
 } from '../src/one-shot-events.js';
 
 describe('OpenClaw one-shot event projection', () => {
-  it('keeps intermediate agent responses separate from the final answer', () => {
-    const thinking = projectStep({
+  it('streams intermediate agent responses before the final answer', () => {
+    const streamed = projectStep({
       event: 'step_update',
       step_update: {
         conversation_id: 'conv-123',
@@ -24,7 +24,7 @@ describe('OpenClaw one-shot event projection', () => {
       conversationId: 'conv-123',
     });
 
-    expect(thinking).toEqual({ type: 'thinking', text: 'Working on it...' });
+    expect(streamed).toEqual({ type: 'text', text: 'Working on it...' });
     expect(result).toEqual({
       type: 'result',
       status: 'SUCCESS',
